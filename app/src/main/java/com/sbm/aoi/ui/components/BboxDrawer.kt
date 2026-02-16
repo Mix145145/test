@@ -104,14 +104,20 @@ fun BboxDrawer(
     }
 
     fun canvasToImage(point: Offset, viewport: ImageViewport): Offset {
-        val x = ((point.x - viewport.left) / viewport.width * imageWidth).coerceIn(0f, imageWidth.toFloat())
-        val y = ((point.y - viewport.top) / viewport.height * imageHeight).coerceIn(0f, imageHeight.toFloat())
+        val iw = imageWidth.toFloat()
+        val ih = imageHeight.toFloat()
+
+        val x = ((point.x - viewport.left) / viewport.width * iw).coerceIn(0f, iw)
+        val y = ((point.y - viewport.top) / viewport.height * ih).coerceIn(0f, ih)
         return Offset(x, y)
     }
 
     fun imageToCanvas(point: Offset, viewport: ImageViewport): Offset {
-        val x = viewport.left + (point.x / imageWidth * viewport.width)
-        val y = viewport.top + (point.y / imageHeight * viewport.height)
+        val iw = imageWidth.toFloat()
+        val ih = imageHeight.toFloat()
+
+        val x = viewport.left + (point.x / iw * viewport.width)
+        val y = viewport.top + (point.y / ih * viewport.height)
         return Offset(x, y)
     }
 

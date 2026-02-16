@@ -33,15 +33,19 @@ class StorageViewModel @Inject constructor(
     private val status = MutableStateFlow("")
 
     val uiState: StateFlow<StorageUiState> = combine(
-        repository.settings,
-        repository.rooms,
-        repository.items,
-        repository.codes,
-        query,
-        searchResult,
-        status,
-    ) { settings, rooms, items, codes, q, result, s ->
-        StorageUiState(settings, rooms, items, codes, q, result, s)
+        combine(
+            repository.settings,
+            repository.rooms,
+            repository.items,
+            repository.codes,
+        ) { settings, rooms, items, codes ->
+            Quad(settings, rooms, items, codes)
+        },
+        combine(query, searchResult, status) { q, result, s ->
+            Triple(q, result, s)
+        },
+    ) { core, ui ->
+        StorageUiState(core.first, core.second, core.third, core.fourth, ui.first, ui.second, ui.third)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StorageUiState())
 
     fun onNameEntered(name: String) = viewModelScope.launch { repository.ensureSettings(name) }
@@ -91,6 +95,13 @@ class StorageViewModel @Inject constructor(
     }
 }
 
+
+private data class Quad<A, B, C, D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+)
 data class StorageUiState(
     val settings: UserSettingsEntity? = null,
     val rooms: List<RoomEntity> = emptyList(),
