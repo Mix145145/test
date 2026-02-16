@@ -90,6 +90,7 @@ fun InspectionScreen(
     val cameraManager = remember { CameraManager(context) }
     val isFlashOn by cameraManager.isFlashOn.collectAsState()
     val zoomRatio by cameraManager.zoomRatio.collectAsState()
+    var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
 
     DisposableEffect(Unit) {
         onDispose { cameraManager.release() }
@@ -156,6 +157,7 @@ fun InspectionScreen(
                     viewModel.frameAnalyzer,
                 )
 
+                previewViewRef = previewView
                 previewView
             },
             modifier = Modifier.fillMaxSize(),
@@ -300,7 +302,13 @@ fun InspectionScreen(
 
             // Переключение камеры
             IconButton(onClick = {
-                // Переключение камеры требует пересоздания preview
+                previewViewRef?.let { previewView ->
+                    cameraManager.switchCamera(
+                        lifecycleOwner = lifecycleOwner,
+                        previewView = previewView,
+                        analyzer = viewModel.frameAnalyzer,
+                    )
+                }
             }) {
                 Icon(
                     Icons.Default.Cameraswitch,
