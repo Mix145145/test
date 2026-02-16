@@ -63,6 +63,12 @@ interface StorageDao {
     @Query("SELECT * FROM QrCodeEntity WHERE codeIdString=:code LIMIT 1")
     suspend fun findByCode(code: String): QrCodeEntity?
 
+    @Query("SELECT * FROM RoomEntity WHERE id=:roomId LIMIT 1")
+    suspend fun getRoomById(roomId: String): RoomEntity?
+
+    @Query("SELECT * FROM ItemEntity WHERE id=:itemId LIMIT 1")
+    suspend fun getItemById(itemId: String): ItemEntity?
+
     @Query("SELECT query FROM SearchHistoryEntity ORDER BY lastUsedAt DESC LIMIT :limit")
     suspend fun recentSearches(limit: Int): List<String>
 

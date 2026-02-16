@@ -37,6 +37,8 @@ data class RoomEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val locationId: String,
     val name: String,
+    val type: String = "Комната",
+    val colorHex: String = "#E8F1FF",
     val x: Float = 0f,
     val y: Float = 0f,
     val width: Float = 100f,
@@ -88,6 +90,8 @@ data class ItemEntity(
     val description: String = "",
     val tags: String = "",
     val photoUri: String? = null,
+    val roomId: String? = null,
+    val storageType: String = "Полка",
     val cellId: String? = null,
 )
 
