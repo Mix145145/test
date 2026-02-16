@@ -114,6 +114,15 @@ dependencies {
     // Coil (загрузка изображений)
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+
+    // Room
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+
+    // QR
+    implementation("com.google.zxing:core:3.5.3")
+
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
