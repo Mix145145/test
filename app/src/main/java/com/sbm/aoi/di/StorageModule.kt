@@ -19,7 +19,9 @@ object StorageModule {
     @Provides
     @Singleton
     fun provideStorageDb(@ApplicationContext context: Context): StorageDatabase =
-        Room.databaseBuilder(context, StorageDatabase::class.java, "qfa.db").build()
+        Room.databaseBuilder(context, StorageDatabase::class.java, "qfa.db")
+            .fallbackToDestructiveMigration()
+            .build()
 
     @Provides
     @Singleton

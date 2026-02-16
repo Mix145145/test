@@ -15,7 +15,7 @@ import androidx.room.RoomDatabase
         SearchHistoryEntity::class,
         ScanHistoryEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class StorageDatabase : RoomDatabase() {

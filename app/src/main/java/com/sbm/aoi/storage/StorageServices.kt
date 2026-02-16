@@ -24,6 +24,32 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
+data class RoomCreateRequest(
+    val name: String,
+    val type: String,
+    val colorHex: String,
+)
+
+data class RoomUpdateRequest(
+    val roomId: String,
+    val x: Float,
+    val y: Float,
+    val type: String,
+    val colorHex: String,
+)
+
+data class ScanResult(
+    val qr: QrCodeEntity? = null,
+    val requiresBinding: Boolean = false,
+    val roomOptions: List<RoomEntity> = emptyList(),
+    val note: String = "",
+)
+
+data class ItemNote(
+    val item: ItemEntity,
+    val room: RoomEntity?,
+)
+
 class PrefixGenerator {
     private val transliteration = mapOf(
         'а' to "a", 'б' to "b", 'в' to "v", 'г' to "g", 'д' to "d", 'е' to "e", 'ё' to "e",
@@ -77,13 +103,33 @@ class StorageRepository(private val dao: StorageDao) {
         return id
     }
 
-    suspend fun addRoom(name: String, order: Int) {
+    suspend fun addRoom(request: RoomCreateRequest, order: Int) {
         val locationId = ensureDefaultLocation()
-        dao.insertRoom(RoomEntity(locationId = locationId, name = name, roomOrder = order))
+        dao.insertRoom(
+            RoomEntity(
+                locationId = locationId,
+                name = request.name,
+                roomOrder = order,
+                type = request.type,
+                colorHex = request.colorHex,
+            ),
+        )
     }
 
-    suspend fun addItem(name: String) {
-        dao.insertItem(ItemEntity(name = name))
+    suspend fun updateRoomLayout(request: RoomUpdateRequest) {
+        val room = dao.getRoomById(request.roomId) ?: return
+        dao.insertRoom(
+            room.copy(
+                x = request.x,
+                y = request.y,
+                type = request.type,
+                colorHex = request.colorHex,
+            ),
+        )
+    }
+
+    suspend fun addItem(name: String, roomId: String? = null, noteText: String = "", photoUri: String? = null) {
+        dao.insertItem(ItemEntity(name = name, description = noteText, photoUri = photoUri, roomId = roomId))
     }
 
     suspend fun nextCode(prefix: String): String {
@@ -123,10 +169,25 @@ class StorageRepository(private val dao: StorageDao) {
 
     suspend fun saveSearch(query: String) = dao.insertSearch(SearchHistoryEntity(query = query))
 
-    suspend fun scan(payload: String): QrCodeEntity? {
+    suspend fun scan(payload: String): ScanResult {
         val match = dao.findByPayload(payload)
         dao.insertScan(ScanHistoryEntity(payloadString = payload, resolvedEntityType = match?.entityType, resolvedEntityId = match?.entityId))
-        return match
+        return if (match == null) {
+            ScanResult(
+                requiresBinding = true,
+                roomOptions = dao.getAllRooms().sortedBy { it.name },
+                note = "Код не найден. Выберите комнату и тип хранения для привязки.",
+            )
+        } else {
+            ScanResult(qr = match, note = "Найден код ${match.codeIdString}")
+        }
+    }
+
+    suspend fun notesByCode(qr: QrCodeEntity): List<ItemNote> {
+        if (qr.entityType != "ITEM") return emptyList()
+        val item = dao.getItemById(qr.entityId) ?: return emptyList()
+        val room = item.roomId?.let { dao.getRoomById(it) }
+        return listOf(ItemNote(item = item, room = room))
     }
 
     suspend fun clearScanHistory() = dao.clearScanHistory()

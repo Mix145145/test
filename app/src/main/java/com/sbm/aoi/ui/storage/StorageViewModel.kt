@@ -6,7 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.sbm.aoi.storage.BackupService
 import com.sbm.aoi.storage.ItemEntity
 import com.sbm.aoi.storage.QrCodeEntity
+import com.sbm.aoi.storage.RoomCreateRequest
 import com.sbm.aoi.storage.RoomEntity
+import com.sbm.aoi.storage.RoomUpdateRequest
+import com.sbm.aoi.storage.ScanResult
 import com.sbm.aoi.storage.SearchResult
 import com.sbm.aoi.storage.StickerLabel
 import com.sbm.aoi.storage.StickerService
@@ -31,6 +34,8 @@ class StorageViewModel @Inject constructor(
     private val query = MutableStateFlow("")
     private val searchResult = MutableStateFlow(SearchResult(emptyList(), emptyList(), emptyList()))
     private val status = MutableStateFlow("")
+    private val scanResult = MutableStateFlow(ScanResult())
+    private val noteResults = MutableStateFlow<List<String>>(emptyList())
 
     val uiState: StateFlow<StorageUiState> = combine(
         combine(
@@ -41,11 +46,11 @@ class StorageViewModel @Inject constructor(
         ) { settings, rooms, items, codes ->
             Quad(settings, rooms, items, codes)
         },
-        combine(query, searchResult, status) { q, result, s ->
-            Triple(q, result, s)
+        combine(query, searchResult, status, scanResult, noteResults) { q, result, s, scan, notes ->
+            Quint(q, result, s, scan, notes)
         },
     ) { core, ui ->
-        StorageUiState(core.first, core.second, core.third, core.fourth, ui.first, ui.second, ui.third)
+        StorageUiState(core.first, core.second, core.third, core.fourth, ui.first, ui.second, ui.third, ui.fourth, ui.fifth)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StorageUiState())
 
     fun onNameEntered(name: String) = viewModelScope.launch { repository.ensureSettings(name) }
@@ -55,9 +60,19 @@ class StorageViewModel @Inject constructor(
         status.value = "Настройки сохранены"
     }
 
-    fun addRoom(name: String) = viewModelScope.launch { repository.addRoom(name, uiState.value.rooms.size) }
+    fun addRoom(name: String, type: String, colorHex: String) = viewModelScope.launch {
+        repository.addRoom(RoomCreateRequest(name, type, colorHex), uiState.value.rooms.size)
+        status.value = "Комната добавлена"
+    }
 
-    fun addItem(name: String) = viewModelScope.launch { repository.addItem(name) }
+    fun saveRoomLayout(roomId: String, x: Float, y: Float, type: String, colorHex: String) = viewModelScope.launch {
+        repository.updateRoomLayout(RoomUpdateRequest(roomId = roomId, x = x, y = y, type = type, colorHex = colorHex))
+    }
+
+    fun addItem(name: String, roomId: String?, storageType: String, noteText: String, photoUri: String? = null) = viewModelScope.launch {
+        repository.addItem(name = name, roomId = roomId, noteText = "$storageType: $noteText", photoUri = photoUri)
+        status.value = "Объект добавлен"
+    }
 
     fun generateItemQr(itemId: String) = viewModelScope.launch {
         val qr = repository.bindQr("ITEM", itemId)
@@ -70,13 +85,32 @@ class StorageViewModel @Inject constructor(
     }
 
     fun createBatchCodes(count: Int) = viewModelScope.launch {
-        val codes = repository.createBatchFreeCodes(count)
-        status.value = "Создано свободных кодов: ${codes.size}"
+        val safeCount = count.coerceIn(1, 5)
+        val codes = repository.createBatchFreeCodes(safeCount)
+        status.value = "Создано кодов: ${codes.size}. Готово к сохранению/печати"
     }
 
     fun scanPayload(payload: String) = viewModelScope.launch {
         val result = repository.scan(payload)
-        status.value = result?.let { "Скан: найден ${it.codeIdString} (${it.entityType})" } ?: "Неизвестный код"
+        scanResult.value = result
+        if (result.requiresBinding) {
+            noteResults.value = emptyList()
+            status.value = result.note
+            return@launch
+        }
+        val qr = result.qr
+        if (qr == null) {
+            noteResults.value = emptyList()
+            status.value = "Неизвестный код"
+            return@launch
+        }
+        val notes = repository.notesByCode(qr).map { note ->
+            val roomPart = note.room?.name?.let { "Комната: $it" } ?: "Комната не указана"
+            val photoPart = if (note.item.photoUri.isNullOrBlank()) "без фото" else "с фото"
+            "${note.item.name} • $roomPart • ${note.item.description.ifBlank { "без заметки" }} • $photoPart"
+        }
+        noteResults.value = notes
+        status.value = "Скан: найден ${qr.codeIdString} (${qr.entityType})"
     }
 
     fun exportPdf(context: Context) = viewModelScope.launch {
@@ -102,6 +136,15 @@ private data class Quad<A, B, C, D>(
     val third: C,
     val fourth: D,
 )
+
+private data class Quint<A, B, C, D, E>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+    val fifth: E,
+)
+
 data class StorageUiState(
     val settings: UserSettingsEntity? = null,
     val rooms: List<RoomEntity> = emptyList(),
@@ -110,4 +153,6 @@ data class StorageUiState(
     val query: String = "",
     val searchResult: SearchResult = SearchResult(emptyList(), emptyList(), emptyList()),
     val status: String = "",
+    val scanResult: ScanResult = ScanResult(),
+    val noteResults: List<String> = emptyList(),
 )
