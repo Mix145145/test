@@ -168,7 +168,7 @@ private fun SearchScreen(
             }
         }
         item {
-            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Результаты", fontWeight = FontWeight.SemiBold)
                     if (state.searchResult.items.isEmpty() && state.searchResult.places.isEmpty() && state.searchResult.codes.isEmpty()) {
@@ -265,14 +265,15 @@ private fun MapScreen(
                         modifier = Modifier
                             .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
                             .size(width = room.width.dp + 80.dp, height = room.height.dp + 30.dp)
-                            .animateItemPlacement()
                             .pointerInput(room.id) {
-                                detectDragGestures { change, dragAmount ->
-                                    change.consume()
-                                    x += dragAmount.x
-                                    y += dragAmount.y
-                                    offsets[room.id] = x to y
-                                }
+                                detectDragGestures(
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        x += dragAmount.x
+                                        y += dragAmount.y
+                                        offsets[room.id] = x to y
+                                    },
+                                )
                             },
                         colors = CardDefaults.cardColors(containerColor = colors[index % colors.size]),
                     ) {
