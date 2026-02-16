@@ -7,7 +7,6 @@ import android.os.Vibrator
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sbm.aoi.camera.FrameAnalyzer
-import com.sbm.aoi.data.model.Detection
 import com.sbm.aoi.data.repository.ModelRepository
 import com.sbm.aoi.data.repository.SettingsRepository
 import com.sbm.aoi.data.storage.FileManager
@@ -18,7 +17,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
@@ -60,7 +58,13 @@ class InspectionViewModel @Inject constructor(
                 if (model != null && inferenceEngine.getCurrentModelId() != model.id) {
                     inferenceEngine.loadModel(model)
                 }
-                frameAnalyzer.frameSkipRate = settings.value.frameAnalysisRate
+            }
+        }
+
+        // Применяем изменения настроек анализа без ожидания смены модели
+        viewModelScope.launch {
+            settingsRepository.settings.collect { appSettings ->
+                frameAnalyzer.frameSkipRate = appSettings.frameAnalysisRate
             }
         }
     }
