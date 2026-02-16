@@ -144,7 +144,7 @@ fun BboxDrawer(
                         onDragEnd = {
                             val start = dragStart
                             val end = dragCurrent
-                            val viewport = buildViewport(size.width, size.height)
+                            val viewport = buildViewport(size.width.toFloat(), size.height.toFloat())
 
                             if (isDrawing && start != null && end != null && viewport != null) {
                                 val imageStart = canvasToImage(start, viewport)
@@ -172,7 +172,7 @@ fun BboxDrawer(
                 .pointerInput(isDrawing, zoom, panX, panY) {
                     if (!isDrawing) {
                         detectTapGestures { offset ->
-                            val viewport = buildViewport(size.width, size.height) ?: return@detectTapGestures
+                            val viewport = buildViewport(size.width.toFloat(), size.height.toFloat()) ?: return@detectTapGestures
                             val tap = canvasToImage(offset, viewport)
                             val tapped = defects.firstOrNull { def ->
                                 tap.x in def.x1..def.x2 && tap.y in def.y1..def.y2
@@ -182,7 +182,7 @@ fun BboxDrawer(
                     }
                 },
         ) {
-            val viewport = buildViewport(size.width, size.height) ?: return@Canvas
+            val viewport = buildViewport(size.width.toFloat(), size.height.toFloat()) ?: return@Canvas
 
             drawImage(
                 image = bitmap.asImageBitmap(),
