@@ -1,0 +1,53 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- PCB inspection icon: magnifying glass over circuit board -->
+    <!-- Circuit traces -->
+    <path
+        android:pathData="M30,54 L48,54 L48,48 L54,48 L54,30"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FF1E88E5"
+        android:fillColor="#00000000" />
+    <path
+        android:strokeWidth="2.5"
+        android:strokeColor="#FF1E88E5"
+        android:fillColor="#00000000"
+        android:pathData="M54,78 L54,60 L60,60 L60,54 L78,54" />
+    <path
+        android:strokeWidth="2"
+        android:strokeColor="#FF00BCD4"
+        android:fillColor="#00000000"
+        android:pathData="M36,36 L36,48 M72,60 L60,60 M48,72 L48,60" />
+
+    <!-- Circuit nodes -->
+    <path
+        android:fillColor="#FF1E88E5"
+        android:pathData="M52,52 m-4,0 a4,4 0,1 1,8 0 a4,4 0,1 1,-8 0" />
+    <path
+        android:fillColor="#FF00BCD4"
+        android:pathData="M36,36 m-3,0 a3,3 0,1 1,6 0 a3,3 0,1 1,-6 0" />
+    <path
+        android:fillColor="#FF00BCD4"
+        android:pathData="M72,60 m-3,0 a3,3 0,1 1,6 0 a3,3 0,1 1,-6 0" />
+    <path
+        android:fillColor="#FF00BCD4"
+        android:pathData="M48,72 m-3,0 a3,3 0,1 1,6 0 a3,3 0,1 1,-6 0" />
+
+    <!-- Magnifying glass circle -->
+    <path
+        android:strokeWidth="3"
+        android:strokeColor="#FFFFFFFF"
+        android:fillColor="#00000000"
+        android:pathData="M54,50 m-16,0 a16,16 0,1 1,32 0 a16,16 0,1 1,-32 0" />
+
+    <!-- Magnifying glass handle -->
+    <path
+        android:strokeWidth="4"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M65,61 L76,72" />
+</vector>
