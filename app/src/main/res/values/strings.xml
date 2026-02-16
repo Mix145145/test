@@ -1,9 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SBM AOI</string>
-    <string name="tab_inspection">Инспекция</string>
-    <string name="tab_photo">Фото</string>
-    <string name="tab_markup">Разметка</string>
-    <string name="tab_models">Модели</string>
-    <string name="tab_settings">Настройки</string>
+    <string name="app_name">QFA Storage</string>
 </resources>
