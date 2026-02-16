@@ -33,15 +33,25 @@ class StorageViewModel @Inject constructor(
     private val status = MutableStateFlow("")
 
     val uiState: StateFlow<StorageUiState> = combine(
-        repository.settings,
-        repository.rooms,
-        repository.items,
-        repository.codes,
-        query,
-        searchResult,
-        status,
-    ) { settings, rooms, items, codes, q, result, s ->
-        StorageUiState(settings, rooms, items, codes, q, result, s)
+        arrayOf(
+            repository.settings,
+            repository.rooms,
+            repository.items,
+            repository.codes,
+            query,
+            searchResult,
+            status,
+        ),
+    ) { values ->
+        StorageUiState(
+            settings = values[0] as UserSettingsEntity?,
+            rooms = values[1] as List<RoomEntity>,
+            items = values[2] as List<ItemEntity>,
+            codes = values[3] as List<QrCodeEntity>,
+            query = values[4] as String,
+            searchResult = values[5] as SearchResult,
+            status = values[6] as String,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StorageUiState())
 
     fun onNameEntered(name: String) = viewModelScope.launch { repository.ensureSettings(name) }
