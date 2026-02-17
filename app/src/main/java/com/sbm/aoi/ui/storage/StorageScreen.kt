@@ -204,6 +204,9 @@ private fun SearchScreen(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var scannerInput by rememberSaveable { mutableStateOf("qa://") }
+    val results = remember(state.searchResult) {
+        state.searchResult.items + state.searchResult.places + state.searchResult.codes
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -255,8 +258,6 @@ private fun SearchScreen(
                 Text("Проверить QR")
             }
         }
-
-        val results = remember(state.searchResult) { state.searchResult.items + state.searchResult.places + state.searchResult.codes }
         if (query.isNotBlank() && results.isEmpty()) {
             item { EmptyHintCard("Ничего не найдено", "Попробуй часть слова или проверь раскладку.") }
         }
