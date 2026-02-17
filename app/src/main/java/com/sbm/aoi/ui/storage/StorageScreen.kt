@@ -1,9 +1,7 @@
 package com.sbm.aoi.ui.storage
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,60 +11,50 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MeetingRoom
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Map
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.QrCode
-import androidx.compose.material.icons.outlined.QrCodeScanner
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.MeetingRoom
+import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlin.math.roundToInt
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private data class StorageTab(
     val title: String,
@@ -75,22 +63,16 @@ private data class StorageTab(
 )
 
 private val tabs = listOf(
+    StorageTab("Главная", { Icon(Icons.Filled.Home, null) }, { Icon(Icons.Outlined.Home, null) }),
     StorageTab("Поиск", { Icon(Icons.Filled.Search, null) }, { Icon(Icons.Outlined.Search, null) }),
-    StorageTab("Карта", { Icon(Icons.Filled.Map, null) }, { Icon(Icons.Outlined.Map, null) }),
-    StorageTab("QR / Сканер", { Icon(Icons.Filled.QrCodeScanner, null) }, { Icon(Icons.Outlined.QrCodeScanner, null) }),
-    StorageTab("Генератор", { Icon(Icons.Filled.QrCode, null) }, { Icon(Icons.Outlined.QrCode, null) }),
-    StorageTab("Профиль", { Icon(Icons.Filled.Person, null) }, { Icon(Icons.Outlined.Person, null) }),
+    StorageTab("Комнаты", { Icon(Icons.Filled.MeetingRoom, null) }, { Icon(Icons.Outlined.MeetingRoom, null) }),
+    StorageTab("QR Печать", { Icon(Icons.Filled.Print, null) }, { Icon(Icons.Outlined.Print, null) }),
 )
-
-private val roomTypes = listOf("Комната", "Балкон", "Гараж", "Кладовка", "Подвал", "Другое")
-private val storageTypes = listOf("Полка", "Ящик", "Коробка", "Шкаф", "Стеллаж", "Другое")
-private val roomColors = listOf("#E8F1FF", "#E7F8EF", "#FFF4E5", "#F4ECFF", "#FFE8E8")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StorageScreen(viewModel: StorageViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     Scaffold(
@@ -108,24 +90,107 @@ fun StorageScreen(viewModel: StorageViewModel = hiltViewModel()) {
         },
     ) { padding ->
         when (selectedTab) {
-            0 -> SearchScreen(state = state, onSearch = viewModel::search, padding = padding)
-            1 -> MapScreen(state = state, onAddRoom = viewModel::addRoom, onSaveRoomLayout = viewModel::saveRoomLayout, padding = padding)
-            2 -> ScanScreen(
-                state = state,
-                onScan = viewModel::scanPayload,
-                onGenerateItemQr = viewModel::generateItemQr,
-                onAddItem = viewModel::addItem,
-                padding = padding,
-            )
+            0 -> HomeScreen(state = state, onOpenScanner = { viewModel.scanPayload(it) }, padding = padding)
+            1 -> SearchScreen(state = state, onSearch = viewModel::search, onScan = viewModel::scanPayload, padding = padding)
+            2 -> RoomsScreen(state = state, onAddRoom = viewModel::addRoom, padding = padding)
+            3 -> PrintScreen(state = state, onCreateBatch = viewModel::createBatchCodes, padding = padding)
+        }
+    }
+}
 
-            3 -> GeneratorScreen(
-                state = state,
-                onCreateBatch = viewModel::createBatchCodes,
-                onExportPdf = { viewModel.exportPdf(context) },
-                padding = padding,
-            )
+@Composable
+private fun HomeScreen(
+    state: StorageUiState,
+    onOpenScanner: (String) -> Unit,
+    padding: PaddingValues,
+) {
+    var scannerValue by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("qa://")) }
+    val recentCodes = state.codes.sortedByDescending { it.createdAt }.take(10)
 
-            else -> ProfileScreen(state = state, onSave = viewModel::updateSettings, padding = padding)
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Text(
+                text = state.settings?.displayName?.ifBlank { "Пользователь" } ?: "Пользователь",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text("Добро пожаловать в ALL QR", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatCard(title = "Всего QR", value = state.codes.size.toString(), modifier = Modifier.weight(1f))
+                StatCard(title = "Описано мест", value = state.rooms.size.toString(), modifier = Modifier.weight(1f))
+                StatCard(title = "Вещей", value = state.items.size.toString(), modifier = Modifier.weight(1f))
+            }
+        }
+
+        item {
+            Button(
+                onClick = { onOpenScanner(scannerValue.text) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+            ) {
+                Icon(Icons.Filled.QrCodeScanner, contentDescription = null)
+                Spacer(Modifier.padding(6.dp))
+                Text("Сканировать QR", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+
+        item {
+            OutlinedTextField(
+                value = scannerValue,
+                onValueChange = { scannerValue = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Тестовый payload") },
+                supportingText = { Text("Для отладки: qa://ABC-123") },
+                singleLine = true,
+            )
+        }
+
+        if (recentCodes.isEmpty()) {
+            item {
+                EmptyHintCard(
+                    title = "Пока нет недавних мест",
+                    subtitle = "Создай QR → распечатай → сканируй и опиши.",
+                )
+            }
+        } else {
+            item { Text("Недавние", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
+            items(recentCodes) { code ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                ) {
+                    Column(Modifier.padding(14.dp)) {
+                        Text("Комната · ${code.entityType}", fontWeight = FontWeight.SemiBold)
+                        Text(code.codeIdString)
+                        Text(
+                            SimpleDateFormat("dd.MM HH:mm", Locale.getDefault()).format(Date(code.createdAt)),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatCard(title: String, value: String, modifier: Modifier = Modifier) {
+    Card(modifier = modifier, shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium)
+            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -134,19 +199,21 @@ fun StorageScreen(viewModel: StorageViewModel = hiltViewModel()) {
 private fun SearchScreen(
     state: StorageUiState,
     onSearch: (String) -> Unit,
+    onScan: (String) -> Unit,
     padding: PaddingValues,
 ) {
-    var query by rememberSaveable { mutableStateOf(state.query) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var scannerInput by rememberSaveable { mutableStateOf("qa://") }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(padding)
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            Text("Поиск по вещам", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("Поиск", style = MaterialTheme.typography.headlineMedium)
             OutlinedTextField(
                 value = query,
                 onValueChange = {
@@ -154,316 +221,122 @@ private fun SearchScreen(
                     onSearch(it)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Например: аптечка, шурупы, удочка") },
+                placeholder = { Text("Найти вещь (например: дрель)") },
+                trailingIcon = {
+                    Text(
+                        text = "Очистить",
+                        modifier = Modifier.clickable {
+                            query = ""
+                            onSearch("")
+                        },
+                    )
+                },
+                singleLine = true,
             )
         }
-        if (state.searchResult.items.isEmpty() && state.searchResult.places.isEmpty() && state.searchResult.codes.isEmpty()) {
-            item { Text("Введите запрос для поиска") }
-        } else {
-            item { Text("Результаты", fontWeight = FontWeight.SemiBold) }
-            items(state.searchResult.items + state.searchResult.places + state.searchResult.codes) { hit ->
-                ResultCard(title = hit.title, path = hit.path)
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AssistChip(onClick = {}, label = { Text("Все комнаты") })
+                AssistChip(onClick = {}, label = { Text("Полка") })
+                AssistChip(onClick = {}, label = { Text("Без архива") })
             }
         }
+
         item {
-            Text("Последние действия", fontWeight = FontWeight.SemiBold)
-            Text(state.status.ifBlank { "Пока нет действий" })
+            OutlinedTextField(
+                value = scannerInput,
+                onValueChange = { scannerInput = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Сканер QR (ввод) ") },
+                singleLine = true,
+            )
+            Button(onClick = { onScan(scannerInput) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp)) {
+                Text("Проверить QR")
+            }
+        }
+
+        val results = remember(state.searchResult) { state.searchResult.items + state.searchResult.places + state.searchResult.codes }
+        if (query.isNotBlank() && results.isEmpty()) {
+            item { EmptyHintCard("Ничего не найдено", "Попробуй часть слова или проверь раскладку.") }
+        }
+        items(results) { hit ->
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp)) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(hit.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(hit.path, style = MaterialTheme.typography.bodyMedium)
+                    Text("qrId: ${hit.id.take(8)}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun ResultCard(title: String, path: String) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, fontWeight = FontWeight.Medium)
-            Text(path.ifBlank { "Квартира → Комната → Шкаф → Полка" }, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun MapScreen(
+private fun RoomsScreen(
     state: StorageUiState,
     onAddRoom: (String, String, String) -> Unit,
-    onSaveRoomLayout: (String, Float, Float, String, String) -> Unit,
     padding: PaddingValues,
 ) {
     var roomName by rememberSaveable { mutableStateOf("") }
-    var roomType by rememberSaveable { mutableStateOf(roomTypes.first()) }
-    var roomColor by rememberSaveable { mutableStateOf(roomColors.first()) }
-    val offsets = remember { mutableStateMapOf<String, Pair<Float, Float>>() }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .padding(16.dp),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Карта квартиры", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Комнаты сохраняются в базе. Можно перетаскивать на карте и видеть список плитками")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = {
+                if (roomName.isNotBlank()) {
+                    onAddRoom(roomName, "Комната", "#1F7A4C")
+                    roomName = ""
+                }
+            }) {
+                Text("+")
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(innerPadding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            item {
+                Text("Комнаты", style = MaterialTheme.typography.headlineMedium)
                 OutlinedTextField(
                     value = roomName,
                     onValueChange = { roomName = it },
-                    label = { Text("Название комнаты") },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Добавить комнату") },
                     singleLine = true,
                 )
-                RoomTypePicker(value = roomType, onChange = { roomType = it })
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                roomColors.forEach { colorHex ->
-                    val color = runCatching { Color(android.graphics.Color.parseColor(colorHex)) }.getOrDefault(Color(0xFFE8F1FF))
-                    Box(
+            items(state.rooms.sortedBy { it.name }) { room ->
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+                    Row(
                         modifier = Modifier
-                            .size(28.dp)
-                            .background(color, RoundedCornerShape(8.dp))
-                            .border(if (roomColor == colorHex) 2.dp else 1.dp, Color.DarkGray, RoundedCornerShape(8.dp))
-                            .pointerInput(colorHex) { detectDragGestures(onDragStart = { roomColor = colorHex }, onDrag = { _, _ -> }) },
-                    )
-                }
-            }
-
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(0.45f)) {
-                items(state.rooms) { room ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Row(Modifier.fillMaxWidth().padding(10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column {
-                                Text(room.name, fontWeight = FontWeight.SemiBold)
-                                Text("${room.type} • цвет ${room.colorHex}")
-                            }
-                            Text("x=${room.x.roundToInt()} y=${room.y.roundToInt()}")
-                        }
-                    }
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .background(Color(0xFFF9FAFB), RoundedCornerShape(20.dp))
-                    .border(1.dp, Color(0xFFD8DEE4), RoundedCornerShape(20.dp)),
-            ) {
-                state.rooms.forEach { room ->
-                    val offsetPair = offsets.getOrPut(room.id) { room.x to room.y }
-                    var x by remember(room.id) { mutableFloatStateOf(offsetPair.first) }
-                    var y by remember(room.id) { mutableFloatStateOf(offsetPair.second) }
-                    val cardColor = runCatching { Color(android.graphics.Color.parseColor(room.colorHex)) }.getOrDefault(Color(0xFFE8F1FF))
-                    Card(
-                        modifier = Modifier
-                            .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
-                            .size(width = room.width.dp + 80.dp, height = room.height.dp + 30.dp)
-                            .pointerInput(room.id) {
-                                detectDragGestures(
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        x += dragAmount.x
-                                        y += dragAmount.y
-                                        offsets[room.id] = x to y
-                                    },
-                                    onDragEnd = { onSaveRoomLayout(room.id, x, y, room.type, room.colorHex) },
-                                )
-                            },
-                        colors = CardDefaults.cardColors(containerColor = cardColor),
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                            Text(room.name, fontWeight = FontWeight.SemiBold)
-                            Text(room.type, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-                if (state.rooms.isEmpty()) {
-                    Text(
-                        "Добавьте первую комнату кнопкой +",
-                        modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-
-        FloatingActionButton(
-            onClick = {
-                if (roomName.isNotBlank()) {
-                    onAddRoom(roomName, roomType, roomColor)
-                    roomName = ""
-                }
-            },
-            modifier = Modifier.align(Alignment.BottomEnd),
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = "Добавить комнату")
-        }
-    }
-}
-
-@Composable
-private fun RoomTypePicker(value: String, onChange: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        OutlinedButton(onClick = { expanded = !expanded }) { Text(value) }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            roomTypes.forEach { type ->
-                DropdownMenuItem(
-                    text = { Text(type) },
-                    onClick = {
-                        onChange(type)
-                        expanded = false
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ScanScreen(
-    state: StorageUiState,
-    onScan: (String) -> Unit,
-    onGenerateItemQr: (String) -> Unit,
-    onAddItem: (String, String?, String, String, String?) -> Unit,
-    padding: PaddingValues,
-) {
-    var payload by rememberSaveable { mutableStateOf("") }
-    var itemName by rememberSaveable { mutableStateOf("") }
-    var note by rememberSaveable { mutableStateOf("") }
-    var selectedRoomId by rememberSaveable { mutableStateOf<String?>(null) }
-    var storageType by rememberSaveable { mutableStateOf(storageTypes.first()) }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            Text("QR / Сканер", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Камера может быть открыта на этом экране. Для dev-сборки доступен быстрый ввод payload.")
-            OutlinedTextField(
-                value = payload,
-                onValueChange = { payload = it },
-                label = { Text("Payload QR") },
-                placeholder = { Text("app-scheme://qfa/... ") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = { onScan(payload) }, modifier = Modifier.fillMaxWidth()) { Text("Сканировать") }
-            Spacer(Modifier.height(8.dp))
-            Text(state.status, color = MaterialTheme.colorScheme.primary)
-        }
-
-        if (state.scanResult.requiresBinding) {
-            item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Новый QR: сначала выберите комнату и куда привязать", fontWeight = FontWeight.SemiBold)
-                        OutlinedTextField(value = itemName, onValueChange = { itemName = it }, label = { Text("Название предмета") }, modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text("Заметка (текст)") }, modifier = Modifier.fillMaxWidth())
-                        RoomIdPicker(
-                            options = state.scanResult.roomOptions,
-                            selected = selectedRoomId,
-                            onSelected = { selectedRoomId = it },
-                        )
-                        StorageTypePicker(storageType = storageType, onSelected = { storageType = it })
-                        Button(
-                            onClick = {
-                                if (itemName.isNotBlank()) {
-                                    onAddItem(itemName, selectedRoomId, storageType, note, null)
-                                    itemName = ""
-                                    note = ""
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text("Сохранить привязку") }
+                        Text(room.name, style = MaterialTheme.typography.titleMedium)
+                        Text(state.items.count { it.roomId == room.id }.toString(), style = MaterialTheme.typography.titleLarge)
                     }
                 }
             }
         }
-
-        if (state.noteResults.isNotEmpty()) {
-            item { Text("Записи пользователя", fontWeight = FontWeight.SemiBold) }
-            items(state.noteResults) { row ->
-                Card(Modifier.fillMaxWidth()) { Text(row, modifier = Modifier.padding(12.dp)) }
-            }
-        }
-
-        item {
-            Text("Быстрая привязка", fontWeight = FontWeight.SemiBold)
-            if (state.items.isEmpty()) {
-                Text("Сначала создайте объект")
-            }
-        }
-        items(state.items) { item ->
-            Card(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column {
-                        Text(item.name, fontWeight = FontWeight.Medium)
-                        Text(item.description.ifBlank { "Без заметки" }, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    OutlinedButton(onClick = { onGenerateItemQr(item.id) }) { Text("Привязать QR") }
-                }
-            }
-        }
     }
 }
 
 @Composable
-private fun RoomIdPicker(
-    options: List<com.sbm.aoi.storage.RoomEntity>,
-    selected: String?,
-    onSelected: (String?) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val title = options.firstOrNull { it.id == selected }?.name ?: "Выберите комнату"
-    Box {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) { Text(title) }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { room ->
-                DropdownMenuItem(
-                    text = { Text(room.name) },
-                    onClick = {
-                        onSelected(room.id)
-                        expanded = false
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun StorageTypePicker(storageType: String, onSelected: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) { Text(storageType) }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            storageTypes.forEach { type ->
-                DropdownMenuItem(text = { Text(type) }, onClick = {
-                    onSelected(type)
-                    expanded = false
-                })
-            }
-        }
-    }
-}
-
-@Composable
-private fun GeneratorScreen(
+private fun PrintScreen(
     state: StorageUiState,
     onCreateBatch: (Int) -> Unit,
-    onExportPdf: () -> Unit,
     padding: PaddingValues,
 ) {
+    var count by rememberSaveable { mutableStateOf("20") }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -472,71 +345,68 @@ private fun GeneratorScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Text("Генератор кодов", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Пакет по 5 шт: после генерации можно сразу сохранить PDF или отправить на печать")
+            Text("Создать QR-коды", style = MaterialTheme.typography.headlineMedium)
+            OutlinedTextField(
+                value = count,
+                onValueChange = { count = it.filter(Char::isDigit) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Количество") },
+                singleLine = true,
+            )
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { onCreateBatch(5) }) { Text("Сгенерировать 5") }
-                        OutlinedButton(onClick = onExportPdf) { Text("Сохранить / Печать") }
-                    }
-                    Text("Prefix: ${state.settings?.prefix ?: "User"}")
-                    Text("Свободных кодов: ${state.codes.count { it.status == "free" }}")
-                    Text("Всего кодов: ${state.codes.size}")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(20, 50, 100, 200).forEach { quick ->
+                    AssistChip(onClick = { count = quick.toString() }, label = { Text(quick.toString()) })
                 }
             }
         }
         item {
-            Text("Последние ID", fontWeight = FontWeight.SemiBold)
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+                Column(Modifier.padding(14.dp)) {
+                    Text("Формат печати: 50×40 мм", style = MaterialTheme.typography.titleMedium)
+                    Text("Под термопринтер стикеров", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
-        items(state.codes.take(20)) { code ->
-            Row(
-                Modifier
+        item {
+            Button(
+                onClick = { onCreateBatch(count.toIntOrNull() ?: 20) },
+                modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .height(56.dp),
+                shape = RoundedCornerShape(28.dp),
             ) {
-                Text(code.codeIdString, modifier = Modifier.width(120.dp), fontWeight = FontWeight.Medium)
-                Text(code.status, color = if (code.status == "free") Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Сгенерировать PDF")
+            }
+        }
+        item { Text("История", style = MaterialTheme.typography.titleLarge) }
+        items(state.codes.sortedByDescending { it.createdAt }.take(10)) { code ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(code.codeIdString, fontWeight = FontWeight.SemiBold)
+                    Text(SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(code.createdAt)))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ProfileScreen(
-    state: StorageUiState,
-    onSave: (String, String) -> Unit,
-    padding: PaddingValues,
-) {
-    var name by rememberSaveable { mutableStateOf(state.settings?.displayName ?: "") }
-    val generatedPrefix = remember(name) { if (name.isBlank()) "User" else name.filter { it.isLetterOrDigit() }.take(12).ifBlank { "User" } }
-    var prefix by rememberSaveable(state.settings?.prefix) { mutableStateOf(state.settings?.prefix ?: generatedPrefix) }
-
-    LazyColumn(
+private fun EmptyHintCard(title: String, subtitle: String) {
+    Box(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(20.dp))
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-            Text("Профиль", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Имя участвует в ID меток")
-        }
-        item {
-            OutlinedTextField(value = name, onValueChange = {
-                name = it
-                prefix = it.filter { ch -> ch.isLetterOrDigit() }.take(12).ifBlank { "User" }
-            }, label = { Text("Ваше имя") }, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(value = prefix, onValueChange = { prefix = it.filter(Char::isLetterOrDigit) }, label = { Text("Префикс ID") }, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = { onSave(name.ifBlank { "User" }, prefix.ifBlank { "User" }) }, modifier = Modifier.fillMaxWidth()) {
-                Text("Сохранить")
-            }
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
